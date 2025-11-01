@@ -85,4 +85,9 @@ public abstract class Veiculo implements VeiculoT {
     // Método abstrato que as classes filhas devem implementar
     @Override
     public abstract double getValorDiariaLocacao();
+
+    public double getValorDeCompra() {
+        return valorDeCompra;
+    }
+
 }

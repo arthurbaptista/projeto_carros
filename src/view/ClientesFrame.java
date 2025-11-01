@@ -9,10 +9,12 @@ import java.util.List;
 
 public class ClientesFrame extends JFrame {
     private JTextField txtNome, txtSobrenome, txtRg, txtCpf, txtEndereco;
-    private JButton btnSalvar, btnListar, btnLimpar;
+    private JButton btnSalvar, btnEditar, btnExcluir, btnLimpar, btnListar;
     private JTable tabelaClientes;
     private DefaultTableModel tableModel;
     private ClienteDAO clienteDAO;
+    private Cliente clienteSelecionado;
+    private boolean modoEdicao = false;
 
     public ClientesFrame() {
         this.clienteDAO = new ClienteDAO();
@@ -20,11 +22,12 @@ public class ClientesFrame extends JFrame {
         setupLayout();
         setupListeners();
         carregarClientes();
+        atualizarEstadoBotoes();
     }
 
     private void initComponents() {
         setTitle("Gerenciar Clientes");
-        setSize(800, 600);
+        setSize(900, 600);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
@@ -37,13 +40,21 @@ public class ClientesFrame extends JFrame {
 
         // Botões
         btnSalvar = new JButton("Salvar Cliente");
-        btnListar = new JButton("Atualizar Lista");
+        btnEditar = new JButton("Editar Cliente");
+        btnExcluir = new JButton("Excluir Cliente");
         btnLimpar = new JButton("Limpar Campos");
+        btnListar = new JButton("Atualizar Lista");
 
         // Tabela
         String[] colunas = {"Nome", "Sobrenome", "RG", "CPF", "Endereço"};
-        tableModel = new DefaultTableModel(colunas, 0);
+        tableModel = new DefaultTableModel(colunas, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
         tabelaClientes = new JTable(tableModel);
+        tabelaClientes.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
     }
 
     private void setupLayout() {
@@ -67,8 +78,10 @@ public class ClientesFrame extends JFrame {
         // Painel de botões
         JPanel panelBotoes = new JPanel(new FlowLayout());
         panelBotoes.add(btnSalvar);
-        panelBotoes.add(btnListar);
+        panelBotoes.add(btnEditar);
+        panelBotoes.add(btnExcluir);
         panelBotoes.add(btnLimpar);
+        panelBotoes.add(btnListar);
 
         // Tabela
         JScrollPane scrollPane = new JScrollPane(tabelaClientes);
@@ -85,8 +98,20 @@ public class ClientesFrame extends JFrame {
 
     private void setupListeners() {
         btnSalvar.addActionListener(e -> salvarCliente());
+        btnEditar.addActionListener(e -> editarCliente());
+        btnExcluir.addActionListener(e -> excluirCliente());
         btnListar.addActionListener(e -> carregarClientes());
         btnLimpar.addActionListener(e -> limparCampos());
+
+        // Seleção na tabela
+        tabelaClientes.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                int selectedRow = tabelaClientes.getSelectedRow();
+                if (selectedRow != -1) {
+                    carregarClienteSelecionado(selectedRow);
+                }
+            }
+        });
     }
 
     private void salvarCliente() {
@@ -115,20 +140,98 @@ public class ClientesFrame extends JFrame {
         }
     }
 
+    private void editarCliente() {
+        if (clienteSelecionado == null) {
+            JOptionPane.showMessageDialog(this, "Selecione um cliente para editar!", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            String nome = txtNome.getText().trim();
+            String sobrenome = txtSobrenome.getText().trim();
+            String endereco = txtEndereco.getText().trim();
+
+            if (nome.isEmpty() || sobrenome.isEmpty() || endereco.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Preencha todos os campos!", "Erro", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            clienteSelecionado.setNome(nome);
+            clienteSelecionado.setSobrenome(sobrenome);
+            clienteSelecionado.setEndereco(endereco);
+
+            clienteDAO.atualizar(clienteSelecionado);
+
+            JOptionPane.showMessageDialog(this, "Cliente atualizado com sucesso!");
+
+            modoEdicao = false;
+            limparCampos();
+            carregarClientes();
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao editar cliente: " + ex.getMessage(),
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void excluirCliente() {
+        if (clienteSelecionado == null) {
+            JOptionPane.showMessageDialog(this, "Selecione um cliente para excluir!", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Tem certeza que deseja excluir o cliente?\n" +
+                        clienteSelecionado.getNome() + " " + clienteSelecionado.getSobrenome() + " - CPF: " + clienteSelecionado.getCpf(),
+                "Confirmar Exclusão", JOptionPane.YES_NO_OPTION);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                clienteDAO.excluir(clienteSelecionado);
+                JOptionPane.showMessageDialog(this, "Cliente excluído com sucesso!");
+                limparCampos();
+                carregarClientes();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Erro ao excluir cliente: " + ex.getMessage(),
+                        "Erro", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
     private void carregarClientes() {
-        tableModel.setRowCount(0); // Limpa a tabela
+        tableModel.setRowCount(0);
         List<Cliente> clientes = clienteDAO.listarTodos();
 
         for (Cliente cliente : clientes) {
             Object[] row = {
                     cliente.getNome(),
                     cliente.getSobrenome(),
-                    cliente.getRg(),
-                    cliente.getCpf(),
+                    clienteDAO.formatarRGExibicao(cliente.getRg()),
+                    clienteDAO.formatarCPFExibicao(cliente.getCpf()),
                     cliente.getEndereco()
             };
             tableModel.addRow(row);
         }
+        atualizarEstadoBotoes();
+    }
+
+    private void carregarClienteSelecionado(int rowIndex) {
+        String cpf = (String) tableModel.getValueAt(rowIndex, 3);
+        clienteSelecionado = clienteDAO.buscarPorCPF(cpf.replaceAll("[^0-9]", ""));
+
+        if (clienteSelecionado != null) {
+            txtNome.setText(clienteSelecionado.getNome());
+            txtSobrenome.setText(clienteSelecionado.getSobrenome());
+            txtRg.setText(clienteSelecionado.getRg());
+            txtCpf.setText(clienteSelecionado.getCpf());
+            txtEndereco.setText(clienteSelecionado.getEndereco());
+
+            txtCpf.setEnabled(false);
+            txtRg.setEnabled(false);
+
+            modoEdicao = true;
+        }
+        atualizarEstadoBotoes();
     }
 
     private void limparCampos() {
@@ -137,5 +240,29 @@ public class ClientesFrame extends JFrame {
         txtRg.setText("");
         txtCpf.setText("");
         txtEndereco.setText("");
+
+        txtCpf.setEnabled(true);
+        txtRg.setEnabled(true);
+
+        clienteSelecionado = null;
+        modoEdicao = false;
+        tabelaClientes.clearSelection();
+        atualizarEstadoBotoes();
+    }
+
+    private void atualizarEstadoBotoes() {
+        boolean temClienteSelecionado = this.clienteSelecionado != null;
+
+        btnSalvar.setEnabled(!modoEdicao); // Bloqueado durante edição
+        btnEditar.setEnabled(temClienteSelecionado && modoEdicao); // Só habilitado durante edição
+        btnExcluir.setEnabled(temClienteSelecionado); // SEMPRE habilitado quando tem cliente selecionado
+
+        if (modoEdicao) {
+            btnSalvar.setText("Salvar Novo");
+            btnEditar.setText("Confirmar Edição");
+        } else {
+            btnSalvar.setText("Salvar Cliente");
+            btnEditar.setText("Editar Cliente");
+        }
     }
 }

@@ -21,29 +21,64 @@ public class VeiculoDAO {
             if (veiculo instanceof Automovel) {
                 tipo = "AUTOMOVEL";
                 modelo = ((Automovel) veiculo).getModelo().name();
+                System.out.println("  Salvando AUTOMOVEL - Modelo: " + modelo);
             } else if (veiculo instanceof Motocicleta) {
                 tipo = "MOTOCICLETA";
                 modelo = ((Motocicleta) veiculo).getModelo().name();
+                System.out.println(" Salvando MOTOCICLETA - Modelo: " + modelo);
             } else if (veiculo instanceof Van) {
                 tipo = "VAN";
                 modelo = ((Van) veiculo).getModelo().name();
+                System.out.println("🚐 Salvando VAN - Modelo: " + modelo);
             }
+
+            // Debug: mostrar todos os valores
+            System.out.println("  Valores a serem salvos:");
+            System.out.println("  Tipo: " + tipo);
+            System.out.println("  Marca: " + veiculo.getMarca().name());
+            System.out.println("  Estado: " + veiculo.getEstado().name());
+            System.out.println("  Categoria: " + veiculo.getCategoria().name());
+            System.out.println("  Valor Compra: " + veiculo.getValorDeCompra());
+            System.out.println("  Placa: " + veiculo.getPlaca());
+            System.out.println("  Ano: " + veiculo.getAno());
+            System.out.println("  Modelo: " + modelo);
 
             stmt.setString(1, tipo);
             stmt.setString(2, veiculo.getMarca().name());
             stmt.setString(3, veiculo.getEstado().name());
             stmt.setString(4, veiculo.getCategoria().name());
-            stmt.setDouble(5, veiculo.getValorParaVenda()); // Usando um valor base por enquanto
+            stmt.setDouble(5, veiculo.getValorDeCompra());
             stmt.setString(6, veiculo.getPlaca());
             stmt.setInt(7, veiculo.getAno());
             stmt.setString(8, modelo);
 
-            stmt.executeUpdate();
-            System.out.println("✅ Veículo salvo: " + veiculo.getPlaca());
+            int linhasAfetadas = stmt.executeUpdate();
+            System.out.println("✅ Veículo salvo! Linhas afetadas: " + linhasAfetadas);
 
         } catch (SQLException e) {
             System.out.println("❌ Erro ao salvar veículo: " + e.getMessage());
+            e.printStackTrace();
         }
+    }
+
+    public Veiculo buscarPorPlaca(String placa) {
+        String sql = "SELECT * FROM veiculos WHERE placa = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, placa);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                return criarVeiculoFromResultSet(rs);
+            }
+
+        } catch (SQLException e) {
+            System.out.println("❌ Erro ao buscar veículo por placa: " + e.getMessage());
+        }
+
+        return null;
     }
 
     public List<Veiculo> listarTodos() {

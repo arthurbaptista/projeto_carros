@@ -59,7 +59,7 @@ public class MenuPrincipal extends JFrame {
         });
 
         btnLocacao.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Tela de Locação em desenvolvimento!");
+            new LocacaoFrame().setVisible(true);
         });
 
         btnDevolucao.addActionListener(e -> {
