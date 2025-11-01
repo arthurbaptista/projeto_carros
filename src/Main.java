@@ -1,27 +1,27 @@
 import enums.*;
-import model.Cliente;
+import model.*;
+import dao.*;
 
 public class Main {
     public static void main(String[] args) {
         System.out.println("=== SISTEMA LOCADORA DE VEÍCULOS ===");
 
-        // Teste dos enums
-        System.out.println("Marcas disponíveis:");
-        for (Marca marca : Marca.values()) {
-            System.out.println("- " + marca);
+        // Testar conexão com banco
+        DatabaseConnection.getConnection();
+
+        // Teste DAO Cliente
+        ClienteDAO clienteDAO = new ClienteDAO();
+
+        // Criar e salvar cliente
+        Cliente cliente = new Cliente("Maria", "Santos", "7654321", "999.888.777-66", "Av. Principal, 456");
+        clienteDAO.salvar(cliente);
+
+        // Listar clientes
+        System.out.println("\n📋 Clientes cadastrados:");
+        for (Cliente c : clienteDAO.listarTodos()) {
+            System.out.println(" - " + c);
         }
 
-        // Teste da classe Cliente
-        Cliente cliente = new Cliente("João", "Silva", "1234567", "111.222.333-44", "Rua A, 123");
-        System.out.println("\nCliente criado: " + cliente);
-
-        // Teste dos estados
-        System.out.println("\nEstados possíveis:");
-        for (Estado estado : Estado.values()) {
-            System.out.println("- " + estado);
-        }
-
-        System.out.println("\n✅ Estrutura básica criada com sucesso!");
-        System.out.println("📝 Próximo passo: Criar Automovel, Motocicleta e Van");
+        System.out.println("\n✅ Banco de dados e DAO testados com sucesso!");
     }
 }
