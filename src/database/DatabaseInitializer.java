@@ -31,15 +31,30 @@ public class DatabaseInitializer {
             )
             """;
 
+        // SQL PARA NOVA TABELA
+        String sqlLocacoes = """
+            CREATE TABLE IF NOT EXISTS locacoes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                veiculo_placa VARCHAR(10) NOT NULL,
+                cliente_cpf VARCHAR(14) NOT NULL,
+                data_locacao DATE NOT NULL,
+                dias INT NOT NULL,
+                valor_total DECIMAL(10,2) NOT NULL,
+                FOREIGN KEY (veiculo_placa) REFERENCES veiculos(placa),
+                FOREIGN KEY (cliente_cpf) REFERENCES clientes(cpf)
+            )
+            """;
+
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement()) {
 
             stmt.execute(sqlClientes);
             stmt.execute(sqlVeiculos);
+            stmt.execute(sqlLocacoes); // Executa a criação da nova tabela
             System.out.println("✅ Tabelas criadas com sucesso!");
 
         } catch (Exception e) {
-            System.out.println("❌ Erro ao criar tabelas: " + e.getMessage());
+            System.out.println("Erro ao criar tabelas: " + e.getMessage());
         }
     }
 }

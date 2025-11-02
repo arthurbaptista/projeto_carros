@@ -1,28 +1,29 @@
 package view;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.Calendar;
 import java.util.List;
 import model.*;
 import enums.*;
-import dao.*;
+import controller.LocacaoController; // Controller principal
+import controller.VeiculoController; // Controller para filtros
+import view.table.VeiculoLocacaoTableModel; // TableModel
 
 public class LocacaoFrame extends JFrame {
     private JTextField txtBuscaCliente, txtDias, txtData;
     private JComboBox<String> cmbTipoVeiculo, cmbMarca, cmbCategoria;
     private JButton btnBuscarCliente, btnFiltrar, btnLocar;
     private JTable tabelaVeiculos;
-    private DefaultTableModel tableModel;
-    private ClienteDAO clienteDAO;
-    private VeiculoDAO veiculoDAO;
+    private VeiculoLocacaoTableModel tableModel; // Usa o TableModel
+    private LocacaoController locacaoController;
+    private VeiculoController veiculoController;
     private Cliente clienteSelecionado;
     private Veiculo veiculoSelecionado;
 
     public LocacaoFrame() {
-        this.clienteDAO = new ClienteDAO();
-        this.veiculoDAO = new VeiculoDAO();
+        this.locacaoController = new LocacaoController();
+        this.veiculoController = new VeiculoController();
         initComponents();
         setupLayout();
         setupListeners();
@@ -39,10 +40,15 @@ public class LocacaoFrame extends JFrame {
         txtBuscaCliente = new JTextField(20);
         txtDias = new JTextField(5);
         txtData = new JTextField(10);
-        txtData.setText(Calendar.getInstance().get(Calendar.DAY_OF_MONTH) + "/" +
-                (Calendar.getInstance().get(Calendar.MONTH) + 1) + "/" +
-                Calendar.getInstance().get(Calendar.YEAR));
+        // Data atual
+        Calendar hoje = Calendar.getInstance();
+        txtData.setText(String.format("%02d/%02d/%d",
+                hoje.get(Calendar.DAY_OF_MONTH),
+                hoje.get(Calendar.MONTH) + 1,
+                hoje.get(Calendar.YEAR)));
 
+
+        // *** CÓDIGO QUE ESTAVA FALTANDO ***
         // Comboboxes para filtros
         cmbTipoVeiculo = new JComboBox<>(new String[]{"TODOS", "AUTOMOVEL", "MOTOCICLETA", "VAN"});
         cmbMarca = new JComboBox<>();
@@ -53,6 +59,7 @@ public class LocacaoFrame extends JFrame {
         for (Marca marca : Marca.values()) {
             cmbMarca.addItem(marca.name());
         }
+        // *** FIM DO CÓDIGO FALTANTE ***
 
         // Botões
         btnBuscarCliente = new JButton("Buscar Cliente");
@@ -61,13 +68,7 @@ public class LocacaoFrame extends JFrame {
         btnLocar.setEnabled(false);
 
         // Tabela
-        String[] colunas = {"Placa", "Tipo", "Marca", "Modelo", "Ano", "Categoria", "Preço Diária"};
-        tableModel = new DefaultTableModel(colunas, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false; // Tabela não editável
-            }
-        };
+        tableModel = new VeiculoLocacaoTableModel(); // Usa o novo TableModel
         tabelaVeiculos = new JTable(tableModel);
         tabelaVeiculos.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
     }
@@ -126,8 +127,8 @@ public class LocacaoFrame extends JFrame {
             if (!e.getValueIsAdjusting()) {
                 int selectedRow = tabelaVeiculos.getSelectedRow();
                 if (selectedRow != -1) {
-                    String placa = (String) tableModel.getValueAt(selectedRow, 0);
-                    veiculoSelecionado = veiculoDAO.buscarPorPlaca(placa);
+                    // Pega o veículo direto do TableModel
+                    veiculoSelecionado = tableModel.getVeiculoAt(selectedRow);
                     atualizarEstadoBotaoLocar();
                 }
             }
@@ -135,138 +136,55 @@ public class LocacaoFrame extends JFrame {
     }
 
     private void buscarCliente() {
-        String busca = txtBuscaCliente.getText().trim();
-        if (busca.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Digite um nome ou CPF para buscar!");
-            return;
-        }
+        try {
+            clienteSelecionado = locacaoController.buscarCliente(txtBuscaCliente.getText().trim());
 
-        List<Cliente> clientes = clienteDAO.listarTodos();
-        for (Cliente cliente : clientes) {
-            if (cliente.getNome().toLowerCase().contains(busca.toLowerCase()) ||
-                    cliente.getCpf().contains(busca)) {
-                clienteSelecionado = cliente;
-                JOptionPane.showMessageDialog(this,
-                        "Cliente selecionado:\n" +
-                                "Nome: " + cliente.getNome() + " " + cliente.getSobrenome() + "\n" +
-                                "CPF: " + cliente.getCpf(), "Cliente Encontrado", JOptionPane.INFORMATION_MESSAGE);
-                atualizarEstadoBotaoLocar();
-                return;
-            }
-        }
+            JOptionPane.showMessageDialog(this,
+                    "Cliente selecionado:\n" +
+                            "Nome: " + clienteSelecionado.getNome() + " " + clienteSelecionado.getSobrenome() + "\n" +
+                            "CPF: " + clienteSelecionado.getCpf(), "Cliente Encontrado", JOptionPane.INFORMATION_MESSAGE);
+            atualizarEstadoBotaoLocar();
 
-        JOptionPane.showMessageDialog(this, "Cliente não encontrado!", "Erro", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            clienteSelecionado = null;
+        }
     }
 
     private void carregarVeiculosDisponiveis() {
-        tableModel.setRowCount(0);
-        List<Veiculo> veiculos = veiculoDAO.listarDisponiveis();
-
-        for (Veiculo veiculo : veiculos) {
-            adicionarVeiculoNaTabela(veiculo);
-        }
+        tableModel.setVeiculos(veiculoController.listarDisponiveis());
     }
 
     private void filtrarVeiculos() {
-        tableModel.setRowCount(0);
-        List<Veiculo> veiculos = veiculoDAO.listarDisponiveis();
-        String tipoFiltro = (String) cmbTipoVeiculo.getSelectedItem();
-        String marcaFiltro = (String) cmbMarca.getSelectedItem();
-        String categoriaFiltro = (String) cmbCategoria.getSelectedItem();
-
-        for (Veiculo veiculo : veiculos) {
-            // Aplicar filtros
-            boolean passaTipo = tipoFiltro.equals("TODOS") ||
-                    (tipoFiltro.equals("AUTOMOVEL") && veiculo instanceof Automovel) ||
-                    (tipoFiltro.equals("MOTOCICLETA") && veiculo instanceof Motocicleta) ||
-                    (tipoFiltro.equals("VAN") && veiculo instanceof Van);
-
-            boolean passaMarca = marcaFiltro.equals("TODAS") ||
-                    veiculo.getMarca().name().equals(marcaFiltro);
-
-            boolean passaCategoria = categoriaFiltro.equals("TODOS") ||
-                    veiculo.getCategoria().name().equals(categoriaFiltro);
-
-            if (passaTipo && passaMarca && passaCategoria) {
-                adicionarVeiculoNaTabela(veiculo);
-            }
-        }
-    }
-
-    private void adicionarVeiculoNaTabela(Veiculo veiculo) {
-        String tipo = "";
-        String modelo = "";
-
-        if (veiculo instanceof Automovel) {
-            tipo = "AUTOMOVEL";
-            modelo = ((Automovel) veiculo).getModelo().name();
-        } else if (veiculo instanceof Motocicleta) {
-            tipo = "MOTOCICLETA";
-            modelo = ((Motocicleta) veiculo).getModelo().name();
-        } else if (veiculo instanceof Van) {
-            tipo = "VAN";
-            modelo = ((Van) veiculo).getModelo().name();
-        }
-
-        Object[] row = {
-                veiculo.getPlaca(),
-                tipo,
-                veiculo.getMarca().name(),
-                modelo,
-                veiculo.getAno(),
-                veiculo.getCategoria().name(),
-                String.format("R$ %.2f", veiculo.getValorDiariaLocacao())
-        };
-        tableModel.addRow(row);
+        // Lógica de filtro agora está no Controller
+        List<Veiculo> veiculosFiltrados = veiculoController.filtrarDisponiveis(
+                (String) cmbTipoVeiculo.getSelectedItem(),
+                (String) cmbMarca.getSelectedItem(),
+                (String) cmbCategoria.getSelectedItem()
+        );
+        tableModel.setVeiculos(veiculosFiltrados);
     }
 
     private void locarVeiculo() {
         try {
-            if (clienteSelecionado == null) {
-                JOptionPane.showMessageDialog(this, "Selecione um cliente primeiro!", "Erro", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
+            // Apenas para mostrar o valor total no JOPtionPane
+            double valorTotal = veiculoSelecionado.getValorDiariaLocacao() * Integer.parseInt(txtDias.getText().trim());
 
-            if (veiculoSelecionado == null) {
-                JOptionPane.showMessageDialog(this, "Selecione um veículo da tabela!", "Erro", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            int dias = Integer.parseInt(txtDias.getText().trim());
-            if (dias <= 0) {
-                JOptionPane.showMessageDialog(this, "Número de dias deve ser maior que zero!", "Erro", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            // Validar data (formato simples dd/MM/yyyy)
-            String[] dataParts = txtData.getText().split("/");
-            if (dataParts.length != 3) {
-                JOptionPane.showMessageDialog(this, "Data deve estar no formato dd/MM/yyyy!", "Erro", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            // Calcular valor total
-            double valorTotal = veiculoSelecionado.getValorDiariaLocacao() * dias;
-
-            // Confirmar locação
             int confirm = JOptionPane.showConfirmDialog(this,
-                    "Confirmar locação?\n\n" +
-                            "Cliente: " + clienteSelecionado.getNome() + " " + clienteSelecionado.getSobrenome() + "\n" +
-                            "Veículo: " + veiculoSelecionado.getPlaca() + " - " + veiculoSelecionado.getMarca() + "\n" +
-                            "Dias: " + dias + "\n" +
+                    "Confirmar locação?\n" +
+                            "Cliente: " + clienteSelecionado.getNome() + "\n" +
+                            "Veículo: " + veiculoSelecionado.getPlaca() + "\n" +
                             "Valor total: R$ " + String.format("%.2f", valorTotal),
                     "Confirmar Locação", JOptionPane.YES_NO_OPTION);
 
             if (confirm == JOptionPane.YES_OPTION) {
-                // Criar data (simplificado)
-                Calendar dataLocacao = Calendar.getInstance();
-                dataLocacao.set(Calendar.DAY_OF_MONTH, Integer.parseInt(dataParts[0]));
-                dataLocacao.set(Calendar.MONTH, Integer.parseInt(dataParts[1]) - 1);
-                dataLocacao.set(Calendar.YEAR, Integer.parseInt(dataParts[2]));
-
-                // Executar locação
-                veiculoSelecionado.locar(dias, dataLocacao, clienteSelecionado);
-                veiculoDAO.atualizarEstado(veiculoSelecionado.getPlaca(), Estado.LOCADO);
+                // Controller cuida de toda a lógica
+                locacaoController.locarVeiculo(
+                        clienteSelecionado,
+                        veiculoSelecionado,
+                        txtDias.getText(),
+                        txtData.getText()
+                );
 
                 JOptionPane.showMessageDialog(this,
                         "Locação realizada com sucesso!\n" +
@@ -274,19 +192,22 @@ public class LocacaoFrame extends JFrame {
                         "Sucesso", JOptionPane.INFORMATION_MESSAGE);
 
                 // Limpar e recarregar
-                clienteSelecionado = null;
-                veiculoSelecionado = null;
-                txtBuscaCliente.setText("");
-                txtDias.setText("");
-                atualizarEstadoBotaoLocar();
+                limparSelecao();
                 carregarVeiculosDisponiveis();
             }
 
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Número de dias deve ser um valor válido!", "Erro", JOptionPane.ERROR_MESSAGE);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Erro ao realizar locação: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private void limparSelecao() {
+        clienteSelecionado = null;
+        veiculoSelecionado = null;
+        txtBuscaCliente.setText("");
+        txtDias.setText("");
+        tabelaVeiculos.clearSelection();
+        atualizarEstadoBotaoLocar();
     }
 
     private void atualizarEstadoBotaoLocar() {

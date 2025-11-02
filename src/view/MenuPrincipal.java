@@ -62,12 +62,14 @@ public class MenuPrincipal extends JFrame {
             new LocacaoFrame().setVisible(true);
         });
 
+        // ATUALIZADO
         btnDevolucao.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Tela de Devolução em desenvolvimento!");
+            new DevolucaoFrame().setVisible(true);
         });
 
+        // ATUALIZADO
         btnVenda.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Tela de Venda em desenvolvimento!");
+            new VendaFrame().setVisible(true);
         });
     }
 

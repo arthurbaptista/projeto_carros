@@ -1,11 +1,17 @@
 package view;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import model.*;
 import enums.*;
-import dao.VeiculoDAO;
+import controller.VeiculoController; // Importa o Controller
+import view.table.VeiculoTableModel; // Importa o TableModel
+import javax.swing.text.MaskFormatter; // Para máscaras
+import java.text.NumberFormat; // Para máscara de valor
+
+import enums.ModeloAutomovel;
+import enums.ModeloMotocicleta;
+import enums.ModeloVan;
 
 public class VeiculosFrame extends JFrame {
     private JComboBox<Marca> cmbMarca;
@@ -13,12 +19,15 @@ public class VeiculosFrame extends JFrame {
     private JComboBox<Categoria> cmbCategoria;
     private JComboBox<String> cmbTipoVeiculo;
     private JComboBox<Object> cmbModelo;
-    private JTextField txtValorCompra, txtPlaca, txtAno;
+    private JFormattedTextField txtValorCompra, txtPlaca; // Mudou para JFormattedTextField
+    private JTextField txtAno;
     private JButton btnSalvar, btnLimpar;
     private JTable tabelaVeiculos;
-    private DefaultTableModel tableModel;
+    private VeiculoTableModel tableModel; // Usa o AbstractTableModel
+    private VeiculoController controller; // Usa o Controller
 
     public VeiculosFrame() {
+        this.controller = new VeiculoController();
         initComponents();
         setupLayout();
         setupListeners();
@@ -35,16 +44,27 @@ public class VeiculosFrame extends JFrame {
         cmbMarca = new JComboBox<>(Marca.values());
         cmbEstado = new JComboBox<>(Estado.values());
         cmbCategoria = new JComboBox<>(Categoria.values());
-
-        // Combobox para tipo de veículo
         cmbTipoVeiculo = new JComboBox<>(new String[]{"AUTOMOVEL", "MOTOCICLETA", "VAN"});
-
-        // Combobox para modelos (será preenchido dinamicamente)
         cmbModelo = new JComboBox<>();
 
-        // Campos de texto
-        txtValorCompra = new JTextField(15);
-        txtPlaca = new JTextField(10);
+        // Campos de texto com MÁSCARAS
+        try {
+            MaskFormatter placaFormatter = new MaskFormatter("UUU-####"); // XXX-0000
+            placaFormatter.setPlaceholderCharacter('_');
+            txtPlaca = new JFormattedTextField(placaFormatter);
+            txtPlaca.setColumns(10);
+        } catch (java.text.ParseException e) {
+            e.printStackTrace();
+            txtPlaca = new JFormattedTextField();
+        }
+
+        // Máscara para valor monetário
+        NumberFormat format = NumberFormat.getNumberInstance();
+        format.setMinimumFractionDigits(2);
+        format.setMaximumFractionDigits(2);
+        txtValorCompra = new JFormattedTextField(format);
+        txtValorCompra.setColumns(15);
+
         txtAno = new JTextField(5);
 
         // Botões
@@ -52,8 +72,7 @@ public class VeiculosFrame extends JFrame {
         btnLimpar = new JButton("Limpar Campos");
 
         // Tabela
-        String[] colunas = {"Tipo", "Marca", "Modelo", "Placa", "Ano", "Categoria", "Estado", "Valor Compra"};
-        tableModel = new DefaultTableModel(colunas, 0);
+        tableModel = new VeiculoTableModel(); // Usa o novo TableModel
         tabelaVeiculos = new JTable(tableModel);
 
         // Configurar combobox de tipo para atualizar modelos
@@ -61,9 +80,12 @@ public class VeiculosFrame extends JFrame {
         atualizarModelos(); // Inicializar pela primeira vez
     }
 
+    // *** MÉTODO QUE ESTAVA FALTANDO ***
     private void atualizarModelos() {
         cmbModelo.removeAllItems();
         String tipo = (String) cmbTipoVeiculo.getSelectedItem();
+
+        if (tipo == null) return; // Proteção contra null
 
         switch (tipo) {
             case "AUTOMOVEL":
@@ -83,6 +105,7 @@ public class VeiculosFrame extends JFrame {
                 break;
         }
     }
+    // *** FIM DO MÉTODO FALTANTE ***
 
     private void setupLayout() {
         setLayout(new BorderLayout(10, 10));
@@ -140,64 +163,36 @@ public class VeiculosFrame extends JFrame {
 
     private void salvarVeiculo() {
         try {
-            // Validar campos
-            if (txtPlaca.getText().trim().isEmpty() || txtAno.getText().trim().isEmpty() ||
-                    txtValorCompra.getText().trim().isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Preencha todos os campos!", "Erro", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            // Validar placa no formato XXX-0000
-            String placa = txtPlaca.getText().trim().toUpperCase();
-            if (!placa.matches("[A-Z]{3}-\\d{4}")) {
-                JOptionPane.showMessageDialog(this, "Placa deve estar no formato XXX-0000!", "Erro", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
             // Obter dados do formulário
+            String tipo = (String) cmbTipoVeiculo.getSelectedItem();
             Marca marca = (Marca) cmbMarca.getSelectedItem();
             Estado estado = (Estado) cmbEstado.getSelectedItem();
             Categoria categoria = (Categoria) cmbCategoria.getSelectedItem();
-            double valorCompra = Double.parseDouble(txtValorCompra.getText().replace(",", "."));
-            int ano = Integer.parseInt(txtAno.getText().trim());
-            String tipo = (String) cmbTipoVeiculo.getSelectedItem();
+            Object modelo = cmbModelo.getSelectedItem();
 
-            // Criar veículo baseado no tipo
-            Veiculo veiculo = null;
+            // Pega o valor do JFormattedTextField
+            String valorCompraStr = txtValorCompra.getText().replace(".", "").replace(",", ".");
+            if (valorCompraStr.isEmpty()) valorCompraStr = "0";
 
-            switch (tipo) {
-                case "AUTOMOVEL":
-                    ModeloAutomovel modeloAuto = (ModeloAutomovel) cmbModelo.getSelectedItem();
-                    veiculo = new Automovel(marca, estado, categoria, valorCompra, placa, ano, modeloAuto);
-                    break;
+            // Chama o controller para salvar
+            controller.salvar(
+                    tipo,
+                    marca,
+                    estado,
+                    categoria,
+                    valorCompraStr,
+                    txtPlaca.getText(),
+                    txtAno.getText(),
+                    modelo
+            );
 
-                case "MOTOCICLETA":
-                    ModeloMotocicleta modeloMoto = (ModeloMotocicleta) cmbModelo.getSelectedItem();
-                    veiculo = new Motocicleta(marca, estado, categoria, valorCompra, placa, ano, modeloMoto);
-                    break;
+            JOptionPane.showMessageDialog(this,
+                    "Veículo salvo com sucesso!",
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
 
-                case "VAN":
-                    ModeloVan modeloVan = (ModeloVan) cmbModelo.getSelectedItem();
-                    veiculo = new Van(marca, estado, categoria, valorCompra, placa, ano, modeloVan);
-                    break;
-            }
+            limparCampos();
+            carregarVeiculos();
 
-            if (veiculo != null) {
-                // TODO: Salvar no banco (precisamos criar o VeiculoDAO)
-                JOptionPane.showMessageDialog(this,
-                        "Veículo criado!\n" +
-                                "Tipo: " + tipo + "\n" +
-                                "Placa: " + placa + "\n" +
-                                "Diária: R$ " + String.format("%.2f", veiculo.getValorDiariaLocacao()) + "\n" +
-                                "Valor Venda: R$ " + String.format("%.2f", veiculo.getValorParaVenda()),
-                        "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-
-                limparCampos();
-                carregarVeiculos();
-            }
-
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Ano e Valor Compra devem ser números válidos!", "Erro", JOptionPane.ERROR_MESSAGE);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Erro ao salvar veículo: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
@@ -205,18 +200,14 @@ public class VeiculosFrame extends JFrame {
     }
 
     private void carregarVeiculos() {
-        // TODO: Carregar veículos do banco quando tivermos o DAO
-        tableModel.setRowCount(0); // Limpa a tabela por enquanto
-
-        // Exemplo de dados (remover depois)
-        Object[] rowExemplo = {"AUTOMOVEL", "VW", "Gol", "ABC-1234", 2022, "POPULAR", "DISPONIVEL", 25000.00};
-        tableModel.addRow(rowExemplo);
+        // Carrega do banco via controller
+        tableModel.setVeiculos(controller.listarTodos());
     }
 
     private void limparCampos() {
         txtPlaca.setText("");
         txtAno.setText("");
-        txtValorCompra.setText("");
+        txtValorCompra.setValue(null); // Limpa campo formatado
         cmbMarca.setSelectedIndex(0);
         cmbEstado.setSelectedIndex(0);
         cmbCategoria.setSelectedIndex(0);

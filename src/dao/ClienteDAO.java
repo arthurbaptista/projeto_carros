@@ -21,10 +21,10 @@ public class ClienteDAO implements Dao<Cliente> {
             stmt.setString(5, cliente.getEndereco());
 
             stmt.executeUpdate();
-            System.out.println("✅ Cliente salvo: " + cliente.getNome());
+            System.out.println("Cliente salvo: " + cliente.getNome());
 
         } catch (SQLException e) {
-            System.out.println("❌ Erro ao salvar cliente: " + e.getMessage());
+            System.out.println("Erro ao salvar cliente: " + e.getMessage());
         }
     }
 
@@ -42,17 +42,16 @@ public class ClienteDAO implements Dao<Cliente> {
 
             int linhasAfetadas = stmt.executeUpdate();
             if (linhasAfetadas > 0) {
-                System.out.println("✅ Cliente atualizado: " + cliente.getNome());
+                System.out.println("Cliente atualizado: " + cliente.getNome());
             }
 
         } catch (SQLException e) {
-            System.out.println("❌ Erro ao atualizar cliente: " + e.getMessage());
+            System.out.println("Erro ao atualizar cliente: " + e.getMessage());
         }
     }
 
     @Override
     public void excluir(Cliente cliente) {
-        // Primeiro verificar se o cliente tem veículos locados
         if (clienteTemVeiculosLocados(cliente)) {
             throw new RuntimeException("Cliente não pode ser excluído pois possui veículos locados!");
         }
@@ -66,19 +65,21 @@ public class ClienteDAO implements Dao<Cliente> {
 
             int linhasAfetadas = stmt.executeUpdate();
             if (linhasAfetadas > 0) {
-                System.out.println("✅ Cliente excluído: " + cliente.getNome());
+                System.out.println("Cliente excluído: " + cliente.getNome());
             }
 
         } catch (SQLException e) {
-            System.out.println("❌ Erro ao excluir cliente: " + e.getMessage());
+            System.out.println("Erro ao excluir cliente: " + e.getMessage());
             throw new RuntimeException("Erro ao excluir cliente: " + e.getMessage());
         }
     }
 
+    // ATUALIZADO
     private boolean clienteTemVeiculosLocados(Cliente cliente) {
-        // TODO: Implementar verificação quando tivermos a tabela de locações
-        // Por enquanto, retornamos false para permitir exclusão
-        return false;
+        LocacaoDAO locacaoDAO = new LocacaoDAO(); // Instancia o novo LocacaoDAO para verificação
+        String cpfFormatado = formatarCPF(cliente.getCpf()); //verifica o cpf
+
+        return !locacaoDAO.buscarAtivasPorCPF(cpfFormatado).isEmpty();
     }
 
     @Override
@@ -102,7 +103,7 @@ public class ClienteDAO implements Dao<Cliente> {
             }
 
         } catch (SQLException e) {
-            System.out.println("❌ Erro ao buscar cliente por ID: " + e.getMessage());
+            System.out.println("Erro ao buscar cliente por ID: " + e.getMessage());
         }
 
         return null;
@@ -128,7 +129,7 @@ public class ClienteDAO implements Dao<Cliente> {
             }
 
         } catch (SQLException e) {
-            System.out.println("❌ Erro ao buscar cliente por CPF: " + e.getMessage());
+            System.out.println("Erro ao buscar cliente por CPF: " + e.getMessage());
         }
 
         return null;
@@ -155,7 +156,7 @@ public class ClienteDAO implements Dao<Cliente> {
             }
 
         } catch (SQLException e) {
-            System.out.println("❌ Erro ao listar clientes: " + e.getMessage());
+            System.out.println("Erro ao listar clientes: " + e.getMessage());
         }
 
         return clientes;
@@ -183,7 +184,7 @@ public class ClienteDAO implements Dao<Cliente> {
         } else if (rg.length() >= 2) {
             return rg.substring(0, 2);
         } else {
-            return rg; // Retorna como está se for muito curto
+            return rg;
         }
     }
 

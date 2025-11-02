@@ -21,3 +21,15 @@ CREATE TABLE IF NOT EXISTS veiculos (
     ano INT NOT NULL,
     modelo VARCHAR(50) NOT NULL
 );
+
+-- NOVA TABELA
+CREATE TABLE IF NOT EXISTS locacoes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    veiculo_placa VARCHAR(10) NOT NULL,
+    cliente_cpf VARCHAR(14) NOT NULL,
+    data_locacao DATE NOT NULL,
+    dias INT NOT NULL,
+    valor_total DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (veiculo_placa) REFERENCES veiculos(placa),
+    FOREIGN KEY (cliente_cpf) REFERENCES clientes(cpf)
+);
