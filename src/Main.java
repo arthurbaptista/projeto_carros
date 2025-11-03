@@ -1,27 +1,18 @@
-import enums.*;
-import model.*;
-import dao.*;
+import view.MenuPrincipal;
+import database.DatabaseInitializer;
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println("=== SISTEMA LOCADORA DE VEÍCULOS ===");
+        System.out.println("=== INICIANDO SISTEMA LOCADORA DE VEÍCULOS ===");
 
-        // Testar conexão com banco
-        DatabaseConnection.getConnection();
+        // 1. Inicializar banco de dados e criar tabelas
+        System.out.println("Inicializando banco de dados");
+        DatabaseInitializer.inicializar();
 
-        // Teste DAO Cliente
-        ClienteDAO clienteDAO = new ClienteDAO();
-
-        // Criar e salvar cliente
-        Cliente cliente = new Cliente("Maria", "Santos", "7654321", "999.888.777-66", "Av. Principal, 456");
-        clienteDAO.salvar(cliente);
-
-        // Listar clientes
-        System.out.println("\n📋 Clientes cadastrados:");
-        for (Cliente c : clienteDAO.listarTodos()) {
-            System.out.println(" - " + c);
-        }
-
-        System.out.println("\n✅ Banco de dados e DAO testados com sucesso!");
+        // 2. Iniciar interface gráfica
+        System.out.println("Iniciando interface gráfica");
+        java.awt.EventQueue.invokeLater(() -> {
+            new MenuPrincipal().setVisible(true);
+        });
     }
 }

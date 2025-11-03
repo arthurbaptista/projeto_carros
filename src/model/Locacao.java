@@ -15,6 +15,10 @@ public class Locacao {
         this.cliente = cliente;
     }
 
+    public void setCliente(Cliente cliente) {
+        this.cliente = cliente;
+    }
+
     // Getters
     public int getDias() { return dias; }
     public double getValor() { return valor; }

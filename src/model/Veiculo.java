@@ -67,6 +67,10 @@ public abstract class Veiculo implements VeiculoT {
     @Override
     public int getAno() { return ano; }
 
+    public void setLocacao(Locacao locacao) {
+        this.locacao = locacao;
+    }
+
     @Override
     public double getValorParaVenda() {
         int anoAtual = Calendar.getInstance().get(Calendar.YEAR);
@@ -82,7 +86,11 @@ public abstract class Veiculo implements VeiculoT {
         return valorVenda;
     }
 
-    // Método abstrato que as classes filhas devem implementar
     @Override
     public abstract double getValorDiariaLocacao();
+
+    public double getValorDeCompra() {
+        return valorDeCompra;
+    }
+
 }
