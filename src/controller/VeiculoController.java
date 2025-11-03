@@ -29,7 +29,6 @@ public class VeiculoController {
         double valorCompra;
         int ano;
         try {
-            // O valor vem como String de um Double (ex: "50000.0" ou "50000")
             valorCompra = Double.parseDouble(valorCompraStr);
             ano = Integer.parseInt(anoStr.trim());
         } catch (NumberFormatException e) {
@@ -62,7 +61,6 @@ public class VeiculoController {
         }
     }
 
-    // *** MÉTODO DE ATUALIZAÇÃO CORRIGIDO ***
     public void atualizar(Veiculo veiculoSelecionado, Categoria categoria, Estado estado, String valorCompraStr) {
         if (veiculoSelecionado == null) {
             throw new RuntimeException("Nenhum veículo selecionado para editar!");
@@ -90,13 +88,11 @@ public class VeiculoController {
         veiculoDAO.atualizar(veiculoSelecionado);
     }
 
-    // *** NOVO MÉTODO DE EXCLUSÃO ***
     public void excluir(Veiculo veiculoSelecionado) {
         if (veiculoSelecionado == null) {
             throw new RuntimeException("Selecione um veículo para excluir!");
         }
 
-        // Regra de negócio: Não pode excluir veículo locado (adaptado)
         if (veiculoSelecionado.getEstado() == Estado.LOCADO) {
             throw new RuntimeException("Não é possível excluir um veículo que está LOCADO!");
         }
@@ -104,7 +100,6 @@ public class VeiculoController {
         try {
             veiculoDAO.excluir(veiculoSelecionado.getPlaca());
         } catch (RuntimeException e) {
-            // Captura erro do DAO (provavelmente Foreign Key)
             throw new RuntimeException("Não é possível excluir veículo. Ele pode ter um histórico de locações.");
         }
     }

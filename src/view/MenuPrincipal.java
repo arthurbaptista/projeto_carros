@@ -2,6 +2,7 @@ package view;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.GridBagLayout; // <-- 1. ADICIONE ESTA IMPORTAÇÃO
 
 public class MenuPrincipal extends JFrame {
     private JButton btnClientes, btnVeiculos, btnLocacao, btnDevolucao, btnVenda;
@@ -34,7 +35,7 @@ public class MenuPrincipal extends JFrame {
     }
 
     private void setupLayout() {
-        setLayout(new GridLayout(5, 1, 10, 10));
+        setLayout(new GridBagLayout());
 
         JPanel panel = new JPanel();
         panel.setLayout(new GridLayout(5, 1, 10, 10));

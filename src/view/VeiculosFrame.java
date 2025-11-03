@@ -14,14 +14,23 @@ import enums.ModeloAutomovel;
 import enums.ModeloMotocicleta;
 import enums.ModeloVan;
 
+// *** NOVAS IMPORTAÇÕES ***
+import java.util.Locale; // Para o formato "pt-BR" (1.000,00)
+import javax.swing.text.PlainDocument; // Para aplicar o filtro
+import view.utils.ValidacaoPreco; // <-- IMPORTAÇÃO DA CLASSE FALTANTE (AGORA COM NOME CERTO)
+
 public class VeiculosFrame extends JFrame {
     private JComboBox<Marca> cmbMarca;
     private JComboBox<Estado> cmbEstado;
     private JComboBox<Categoria> cmbCategoria;
     private JComboBox<String> cmbTipoVeiculo;
     private JComboBox<Object> cmbModelo;
-    private JFormattedTextField txtValorCompra, txtPlaca; // Mudou para JFormattedTextField
+    private JFormattedTextField txtPlaca;
     private JTextField txtAno;
+
+    // *** CAMPO DE VALOR ATUALIZADO (CAMPO ÚNICO) ***
+    private JFormattedTextField txtValorCompra;
+
     private JButton btnSalvar, btnLimpar, btnEditar, btnExcluir; // NOVOS BOTÕES
     private JTable tabelaVeiculos;
     private VeiculoTableModel tableModel; // Usa o AbstractTableModel
@@ -63,17 +72,27 @@ public class VeiculosFrame extends JFrame {
             txtPlaca = new JFormattedTextField();
         }
 
-        // *** CAMPO 'VALOR COMPRA' ATUALIZADO ***
-        // Use NumberInstance (ex: 50000.00) em vez de CurrencyInstance (ex: R$ 50.000,00)
-        NumberFormat format = NumberFormat.getNumberInstance();
-        format.setGroupingUsed(false); // IMPORTANTE: Tira o "50,000" -> "50000"
+        // *** CAMPO 'VALOR COMPRA' CORRIGIDO (COM FORMATO 1.000,00) ***
+
+        // 1. Cria um formato para o Locale "pt-BR" (Português, Brasil)
+        // Isso garante que o separador de milhar é "." e o decimal é ","
+        Locale brLocale = new Locale("pt", "BR");
+        NumberFormat format = NumberFormat.getNumberInstance(brLocale);
         format.setMinimumFractionDigits(2); // Garante 2 casas decimais
         format.setMaximumFractionDigits(2); // Garante 2 casas decimais
+        format.setGroupingUsed(true); // LIGA o separador de milhar (1.000)
+
+        // 2. Cria o JFormattedTextField com esse formato
+        // Este formato JÁ BLOQUEIA LETRAS automaticamente.
         txtValorCompra = new JFormattedTextField(format);
-        txtValorCompra.setColumns(15);
+        txtValorCompra.setColumns(15); // Define um tamanho bom
         txtValorCompra.setValue(0.0); // Valor inicial
 
+        // *** FIM DA ATUALIZAÇÃO ***
+
         txtAno = new JTextField(5);
+        // *** LINHA CORRIGIDA (agora a classe ValidacaoPreco existe) ***
+        ((PlainDocument) txtAno.getDocument()).setDocumentFilter(new ValidacaoPreco(4));
 
         // Botões
         btnSalvar = new JButton("Salvar Novo");
@@ -135,8 +154,17 @@ public class VeiculosFrame extends JFrame {
         panelForm.add(txtAno);
         panelForm.add(new JLabel("Categoria:"));
         panelForm.add(cmbCategoria);
+
+        // *** NOVO PAINEL DE VALOR (CAMPO ÚNICO) ***
         panelForm.add(new JLabel("Valor Compra:"));
-        panelForm.add(txtValorCompra); // Adiciona o campo formatado
+
+        // Painel interno para "R$ [campo]"
+        JPanel panelValor = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        panelValor.add(new JLabel("R$ ")); // "R$" fixo
+        panelValor.add(txtValorCompra); // Campo único formatado
+
+        panelForm.add(panelValor); // Adiciona o painel de valor ao formulário
+        // *** FIM DO PAINEL DE VALOR ***
 
         // Painel estado (separado)
         JPanel panelEstado = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -176,7 +204,6 @@ public class VeiculosFrame extends JFrame {
         // NOVO: Listener da Tabela para carregar dados
         tabelaVeiculos.getSelectionModel().addListSelectionListener(e -> {
 
-            // *** LINHA CORRIGIDA ***
             if (!e.getValueIsAdjusting()) {
 
                 int selectedRow = tabelaVeiculos.getSelectedRow();
@@ -194,11 +221,21 @@ public class VeiculosFrame extends JFrame {
         });
     }
 
+    // *** MÉTODO ATUALIZADO PARA LER O CAMPO ÚNICO ***
     private void salvarVeiculo() {
         try {
-            // Pega o valor (que é um Number) e converte para String
+            // 1. Pega o valor (que é um Number, ex: 1500.50)
             Object valorObj = txtValorCompra.getValue();
-            String valorCompraStr = (valorObj != null) ? valorObj.toString() : "0";
+            if (valorObj == null) {
+                JOptionPane.showMessageDialog(this, "Valor de compra inválido.", "Erro", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // 2. Converte para a String que o Controller espera (ex: "1500.50")
+            // O .toString() de um Number (Double/Long) é o formato "1500.5"
+            // Precisamos garantir o formato com ponto
+            String valorCompraStr = String.format(Locale.US, "%.2f", ((Number)valorObj).doubleValue());
+
 
             if (modoEdicao) {
                 // *** LÓGICA DE ATUALIZAÇÃO ***
@@ -206,7 +243,7 @@ public class VeiculosFrame extends JFrame {
                         veiculoSelecionado,
                         (Categoria) cmbCategoria.getSelectedItem(),
                         (Estado) cmbEstado.getSelectedItem(),
-                        valorCompraStr // Passa a string numérica (ex: "50000.00")
+                        valorCompraStr // Passa a string numérica (ex: "1500.50")
                 );
                 JOptionPane.showMessageDialog(this, "Veículo atualizado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
 
@@ -276,14 +313,17 @@ public class VeiculosFrame extends JFrame {
         tableModel.setVeiculos(controller.listarTodos());
     }
 
-    // NOVO: Carrega dados do veículo selecionado nos campos
+    // *** MÉTODO ATUALIZADO PARA PREENCHER O CAMPO ÚNICO ***
     private void carregarVeiculoSelecionado() {
         if (veiculoSelecionado == null) return;
 
         // Carrega dados
         txtPlaca.setText(veiculoSelecionado.getPlaca());
         txtAno.setText(String.valueOf(veiculoSelecionado.getAno()));
+
+        // Seta o valor (Double) no JFormattedTextField
         txtValorCompra.setValue(veiculoSelecionado.getValorDeCompra());
+
         cmbMarca.setSelectedItem(veiculoSelecionado.getMarca());
         cmbEstado.setSelectedItem(veiculoSelecionado.getEstado());
         cmbCategoria.setSelectedItem(veiculoSelecionado.getCategoria());
@@ -304,11 +344,11 @@ public class VeiculosFrame extends JFrame {
         }
     }
 
-    // ATUALIZADO: Limpa campos e reseta o modo de edição
+    // *** MÉTODO ATUALIZADO PARA LIMPAR O CAMPO ÚNICO ***
     private void limparCampos() {
         txtPlaca.setText("");
         txtAno.setText("");
-        txtValorCompra.setValue(0.0); // Limpa campo formatado
+        txtValorCompra.setValue(0.0); // Reseta para 0,00
         cmbMarca.setSelectedIndex(0);
         cmbEstado.setSelectedIndex(0);
         cmbCategoria.setSelectedIndex(0);
@@ -321,7 +361,7 @@ public class VeiculosFrame extends JFrame {
         atualizarEstadoBotoes();
     }
 
-    // NOVO: Gerencia quais botões e campos estão ativos
+    // *** MÉTODO ATUALIZADO PARA HABILITAR/DESABILITAR O CAMPO ÚNICO ***
     private void atualizarEstadoBotoes() {
         boolean veiculoSelecionado = this.veiculoSelecionado != null;
 
