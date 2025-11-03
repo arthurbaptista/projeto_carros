@@ -5,9 +5,11 @@ import java.awt.*;
 import model.Cliente;
 import controller.ClienteController;
 import view.table.ClienteTableModel; // Importa o novo TableModel
+import javax.swing.text.MaskFormatter; // <-- IMPORTADO PARA AS MÁSCARAS
 
 public class ClientesFrame extends JFrame {
-    private JTextField txtNome, txtSobrenome, txtRg, txtCpf, txtEndereco;
+    private JTextField txtNome, txtSobrenome, txtEndereco;
+    private JFormattedTextField txtRg, txtCpf; // <-- MUDADO DE JTextField
     private JButton btnSalvar, btnEditar, btnExcluir, btnLimpar, btnListar;
     private JTable tabelaClientes;
     private ClienteTableModel tableModel; // Usa o AbstractTableModel
@@ -33,8 +35,31 @@ public class ClientesFrame extends JFrame {
         // Campos de texto
         txtNome = new JTextField(20);
         txtSobrenome = new JTextField(20);
-        txtRg = new JTextField(15);
-        txtCpf = new JTextField(15);
+
+        // *** MÁSCARAS ADICIONADAS PARA RG E CPF ***
+        try {
+            // Máscara para RG (formato 9 dígitos, ex: 12.345.678-9)
+            // Nota: Alguns RGs têm 8 dígitos. Esta máscara é para o formato mais comum de SP.
+            // Ajuste o "##.###.###-#" se o formato do seu estado for diferente (ex: "##.###.###")
+            MaskFormatter rgFormatter = new MaskFormatter("##.###.###-#");
+            rgFormatter.setPlaceholderCharacter('_');
+            txtRg = new JFormattedTextField(rgFormatter);
+            txtRg.setColumns(15);
+
+            // Máscara para CPF (formato 11 dígitos, ex: 123.456.789-00)
+            MaskFormatter cpfFormatter = new MaskFormatter("###.###.###-##");
+            cpfFormatter.setPlaceholderCharacter('_');
+            txtCpf = new JFormattedTextField(cpfFormatter);
+            txtCpf.setColumns(15);
+
+        } catch (java.text.ParseException e) {
+            e.printStackTrace();
+            // Fallback caso a máscara dê erro
+            txtRg = new JFormattedTextField();
+            txtCpf = new JFormattedTextField();
+        }
+        // *** FIM DAS MÁSCARAS ***
+
         txtEndereco = new JTextField(30);
 
         // Botões
@@ -50,6 +75,7 @@ public class ClientesFrame extends JFrame {
         tabelaClientes = new JTable(tableModel); // Passa o TableModel para a JTable
         tabelaClientes.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
     }
+
     private void setupLayout() {
         setLayout(new BorderLayout(10, 10));
 
@@ -62,9 +88,9 @@ public class ClientesFrame extends JFrame {
         panelForm.add(new JLabel("Sobrenome:"));
         panelForm.add(txtSobrenome);
         panelForm.add(new JLabel("RG:"));
-        panelForm.add(txtRg);
+        panelForm.add(txtRg); // Adiciona o campo formatado
         panelForm.add(new JLabel("CPF:"));
-        panelForm.add(txtCpf);
+        panelForm.add(txtCpf); // Adiciona o campo formatado
         panelForm.add(new JLabel("Endereço:"));
         panelForm.add(txtEndereco);
 
@@ -112,6 +138,8 @@ public class ClientesFrame extends JFrame {
     private void salvarCliente() {
         try {
             // Chama o controller para a lógica de salvar
+            // O .getText() já envia o valor formatado (ex: "123.456.789-00")
+            // O DAO já está preparado para limpar isso
             controller.salvar(
                     txtNome.getText().trim(),
                     txtSobrenome.getText().trim(),
@@ -152,6 +180,11 @@ public class ClientesFrame extends JFrame {
     }
 
     private void excluirCliente() {
+        if (clienteSelecionado == null) {
+            JOptionPane.showMessageDialog(this, "Selecione um cliente para excluir!", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
         int confirm = JOptionPane.showConfirmDialog(this,
                 "Tem certeza que deseja excluir o cliente?\n" +
                         clienteSelecionado.getNome() + " " + clienteSelecionado.getSobrenome(),
@@ -181,12 +214,15 @@ public class ClientesFrame extends JFrame {
         if (clienteSelecionado != null) {
             txtNome.setText(clienteSelecionado.getNome());
             txtSobrenome.setText(clienteSelecionado.getSobrenome());
+            // O .setText() no JFormattedTextField aplica a máscara automaticamente
             txtRg.setText(clienteSelecionado.getRg());
             txtCpf.setText(clienteSelecionado.getCpf());
             txtEndereco.setText(clienteSelecionado.getEndereco());
 
+            // CPF e RG não podem ser editados (são chaves)
             txtCpf.setEnabled(false);
             txtRg.setEnabled(false);
+
             modoEdicao = true;
         }
         atualizarEstadoBotoes();
@@ -195,12 +231,12 @@ public class ClientesFrame extends JFrame {
     private void limparCampos() {
         txtNome.setText("");
         txtSobrenome.setText("");
-        txtRg.setText("");
-        txtCpf.setText("");
+        txtRg.setValue(null); // Limpa campo formatado
+        txtCpf.setValue(null); // Limpa campo formatado
         txtEndereco.setText("");
 
         txtCpf.setEnabled(true);
-        txtRg.setEnabled(true);
+        txtRg.setEnabled(true); // *** LINHA CORRIGIDA (removido o 'E>') ***
 
         clienteSelecionado = null;
         modoEdicao = false;
@@ -216,7 +252,7 @@ public class ClientesFrame extends JFrame {
         btnExcluir.setEnabled(temClienteSelecionado); // SEMPRE habilitado quando tem cliente selecionado
 
         if (modoEdicao) {
-            btnSalvar.setText("Salvar Novo");
+            btnSalvar.setText("Salvar Novo"); // Texto volta ao normal
             btnEditar.setText("Confirmar Edição");
         } else {
             btnSalvar.setText("Salvar Cliente");

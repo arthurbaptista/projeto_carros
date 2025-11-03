@@ -29,7 +29,8 @@ public class VeiculoController {
         double valorCompra;
         int ano;
         try {
-            valorCompra = Double.parseDouble(valorCompraStr.replace(",", "."));
+            // O valor vem como String de um Double (ex: "50000.0" ou "50000")
+            valorCompra = Double.parseDouble(valorCompraStr);
             ano = Integer.parseInt(anoStr.trim());
         } catch (NumberFormatException e) {
             throw new RuntimeException("Ano e Valor Compra devem ser números válidos!");
@@ -58,6 +59,53 @@ public class VeiculoController {
             veiculoDAO.salvar(veiculo);
         } else {
             throw new RuntimeException("Tipo de veículo inválido!");
+        }
+    }
+
+    // *** MÉTODO DE ATUALIZAÇÃO CORRIGIDO ***
+    public void atualizar(Veiculo veiculoSelecionado, Categoria categoria, Estado estado, String valorCompraStr) {
+        if (veiculoSelecionado == null) {
+            throw new RuntimeException("Nenhum veículo selecionado para editar!");
+        }
+
+        double valorCompra;
+        try {
+            // O valor agora vem como String de um Double (ex: "50000.0")
+            valorCompra = Double.parseDouble(valorCompraStr);
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("Valor de Compra deve ser um número válido!");
+        }
+
+        // Regra de negócio: Não permitir alterar estado se estiver LOCADO
+        if(veiculoSelecionado.getEstado() == Estado.LOCADO && estado != Estado.LOCADO) {
+            throw new RuntimeException("Não pode alterar o estado de um veículo LOCADO! Use a tela de devolução.");
+        }
+
+        // Atualiza o objeto
+        veiculoSelecionado.setCategoria(categoria);
+        veiculoSelecionado.setEstado(estado);
+        veiculoSelecionado.setValorDeCompra(valorCompra);
+
+        // Persiste
+        veiculoDAO.atualizar(veiculoSelecionado);
+    }
+
+    // *** NOVO MÉTODO DE EXCLUSÃO ***
+    public void excluir(Veiculo veiculoSelecionado) {
+        if (veiculoSelecionado == null) {
+            throw new RuntimeException("Selecione um veículo para excluir!");
+        }
+
+        // Regra de negócio: Não pode excluir veículo locado (adaptado)
+        if (veiculoSelecionado.getEstado() == Estado.LOCADO) {
+            throw new RuntimeException("Não é possível excluir um veículo que está LOCADO!");
+        }
+
+        try {
+            veiculoDAO.excluir(veiculoSelecionado.getPlaca());
+        } catch (RuntimeException e) {
+            // Captura erro do DAO (provavelmente Foreign Key)
+            throw new RuntimeException("Não é possível excluir veículo. Ele pode ter um histórico de locações.");
         }
     }
 

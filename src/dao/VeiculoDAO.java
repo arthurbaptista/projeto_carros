@@ -49,6 +49,48 @@ public class VeiculoDAO {
         }
     }
 
+    public void atualizar(Veiculo veiculo) {
+        // Apenas os campos permitidos para edição
+        String sql = "UPDATE veiculos SET estado = ?, categoria = ?, valor_compra = ? WHERE placa = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, veiculo.getEstado().name());
+            stmt.setString(2, veiculo.getCategoria().name());
+            stmt.setDouble(3, veiculo.getValorDeCompra());
+            stmt.setString(4, veiculo.getPlaca());
+
+            int linhasAfetadas = stmt.executeUpdate();
+            if (linhasAfetadas > 0) {
+                System.out.println("Veículo atualizado: " + veiculo.getPlaca());
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Erro ao atualizar veículo: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public void excluir(String placa) {
+        // Verifica se há locações (regra de negócio é no Controller)
+        String sql = "DELETE FROM veiculos WHERE placa = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, placa);
+            int linhasAfetadas = stmt.executeUpdate();
+            if (linhasAfetadas > 0) {
+                System.out.println("Veículo excluído: " + placa);
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Erro ao excluir veículo: " + e.getMessage());
+            throw new RuntimeException("Erro ao excluir veículo: " + e.getMessage());
+        }
+    }
+
     public Veiculo buscarPorPlaca(String placa) {
         String sql = "SELECT * FROM veiculos WHERE placa = ?";
 

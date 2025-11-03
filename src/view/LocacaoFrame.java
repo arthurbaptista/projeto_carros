@@ -9,9 +9,11 @@ import enums.*;
 import controller.LocacaoController; // Controller principal
 import controller.VeiculoController; // Controller para filtros
 import view.table.VeiculoLocacaoTableModel; // TableModel
+import java.text.NumberFormat; // *** ADICIONADO ***
 
 public class LocacaoFrame extends JFrame {
-    private JTextField txtBuscaCliente, txtDias, txtData;
+    private JTextField txtBuscaCliente, txtData;
+    private JFormattedTextField txtDias; // *** MUDADO ***
     private JComboBox<String> cmbTipoVeiculo, cmbMarca, cmbCategoria;
     private JButton btnBuscarCliente, btnFiltrar, btnLocar;
     private JTable tabelaVeiculos;
@@ -38,7 +40,14 @@ public class LocacaoFrame extends JFrame {
 
         // Campos de busca
         txtBuscaCliente = new JTextField(20);
-        txtDias = new JTextField(5);
+
+        // *** CAMPO 'DIAS' ATUALIZADO PARA ACEITAR APENAS NÚMEROS ***
+        NumberFormat diasFormat = NumberFormat.getIntegerInstance();
+        diasFormat.setGroupingUsed(false); // Tira o separador (ex: 1,000)
+        txtDias = new JFormattedTextField(diasFormat);
+        txtDias.setColumns(5); // Define o tamanho
+        txtDias.setValue(1); // Valor inicial
+
         txtData = new JTextField(10);
         // Data atual
         Calendar hoje = Calendar.getInstance();
@@ -48,7 +57,6 @@ public class LocacaoFrame extends JFrame {
                 hoje.get(Calendar.YEAR)));
 
 
-        // *** CÓDIGO QUE ESTAVA FALTANDO ***
         // Comboboxes para filtros
         cmbTipoVeiculo = new JComboBox<>(new String[]{"TODOS", "AUTOMOVEL", "MOTOCICLETA", "VAN"});
         cmbMarca = new JComboBox<>();
@@ -59,7 +67,6 @@ public class LocacaoFrame extends JFrame {
         for (Marca marca : Marca.values()) {
             cmbMarca.addItem(marca.name());
         }
-        // *** FIM DO CÓDIGO FALTANTE ***
 
         // Botões
         btnBuscarCliente = new JButton("Buscar Cliente");
@@ -83,7 +90,7 @@ public class LocacaoFrame extends JFrame {
         panelCliente.add(txtBuscaCliente);
         panelCliente.add(btnBuscarCliente);
         panelCliente.add(new JLabel("Dias:"));
-        panelCliente.add(txtDias);
+        panelCliente.add(txtDias); // Adiciona o novo JFormattedTextField
         panelCliente.add(new JLabel("Data:"));
         panelCliente.add(txtData);
 
@@ -124,7 +131,10 @@ public class LocacaoFrame extends JFrame {
 
         // Seleção na tabela
         tabelaVeiculos.getSelectionModel().addListSelectionListener(e -> {
+
+            // *** LINHA CORRIGIDA ***
             if (!e.getValueIsAdjusting()) {
+
                 int selectedRow = tabelaVeiculos.getSelectedRow();
                 if (selectedRow != -1) {
                     // Pega o veículo direto do TableModel
@@ -165,15 +175,28 @@ public class LocacaoFrame extends JFrame {
         tableModel.setVeiculos(veiculosFiltrados);
     }
 
+    // *** MÉTODO CORRIGIDO ***
     private void locarVeiculo() {
         try {
-            // Apenas para mostrar o valor total no JOPtionPane
-            double valorTotal = veiculoSelecionado.getValorDiariaLocacao() * Integer.parseInt(txtDias.getText().trim());
+            // Pega o valor numérico do campo formatado
+            Object diasObj = txtDias.getValue();
+            if (diasObj == null) {
+                JOptionPane.showMessageDialog(this, "Por favor, insira o número de dias.", "Erro de Validação", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Converte para int
+            int dias = ((Number) diasObj).intValue();
+            String diasStr = diasObj.toString(); // Passa a string numérica para o controller
+
+            // Agora podemos calcular o valor total
+            double valorTotal = veiculoSelecionado.getValorDiariaLocacao() * dias;
 
             int confirm = JOptionPane.showConfirmDialog(this,
-                    "Confirmar locação?\n" +
+                    "Confirmar locação?\n\n" +
                             "Cliente: " + clienteSelecionado.getNome() + "\n" +
                             "Veículo: " + veiculoSelecionado.getPlaca() + "\n" +
+                            "Dias: " + dias + "\n" +
                             "Valor total: R$ " + String.format("%.2f", valorTotal),
                     "Confirmar Locação", JOptionPane.YES_NO_OPTION);
 
@@ -182,7 +205,7 @@ public class LocacaoFrame extends JFrame {
                 locacaoController.locarVeiculo(
                         clienteSelecionado,
                         veiculoSelecionado,
-                        txtDias.getText(),
+                        diasStr, // Passa a string numérica
                         txtData.getText()
                 );
 
@@ -197,6 +220,7 @@ public class LocacaoFrame extends JFrame {
             }
 
         } catch (Exception e) {
+            // Este 'catch' pega os erros do controller (ex: "dias <= 0")
             JOptionPane.showMessageDialog(this, "Erro ao realizar locação: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
     }
@@ -205,7 +229,7 @@ public class LocacaoFrame extends JFrame {
         clienteSelecionado = null;
         veiculoSelecionado = null;
         txtBuscaCliente.setText("");
-        txtDias.setText("");
+        txtDias.setValue(1); // Reseta para 1
         tabelaVeiculos.clearSelection();
         atualizarEstadoBotaoLocar();
     }

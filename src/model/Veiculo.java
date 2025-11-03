@@ -27,7 +27,7 @@ public abstract class Veiculo implements VeiculoT {
 
     @Override
     public void locar(int dias, Calendar data, Cliente cliente) {
-        if (this.estado != Estado.DISPONIVEL) {
+        if (this.estado != Estado.DISPONIVEL && this.estado != Estado.NOVO) {
             throw new IllegalStateException("Veículo não está disponível para locação");
         }
 
@@ -67,14 +67,11 @@ public abstract class Veiculo implements VeiculoT {
     @Override
     public int getAno() { return ano; }
 
-    public void setLocacao(Locacao locacao) {
-        this.locacao = locacao;
-    }
-
     @Override
     public double getValorParaVenda() {
         int anoAtual = Calendar.getInstance().get(Calendar.YEAR);
         int idadeVeiculo = anoAtual - this.ano;
+        if (idadeVeiculo < 0) idadeVeiculo = 0; // Para carros do ano
 
         double valorVenda = valorDeCompra - (idadeVeiculo * 0.15 * valorDeCompra);
 
@@ -93,4 +90,20 @@ public abstract class Veiculo implements VeiculoT {
         return valorDeCompra;
     }
 
+    public void setLocacao(Locacao locacao) {
+        this.locacao = locacao;
+    }
+
+    // *** NOVOS SETTERS PARA EDIÇÃO ***
+    public void setCategoria(Categoria categoria) {
+        this.categoria = categoria;
+    }
+
+    public void setEstado(Estado estado) {
+        this.estado = estado;
+    }
+
+    public void setValorDeCompra(double valorDeCompra) {
+        this.valorDeCompra = valorDeCompra;
+    }
 }
