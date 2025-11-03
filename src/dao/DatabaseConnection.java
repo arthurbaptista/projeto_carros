@@ -15,7 +15,7 @@ public class DatabaseConnection {
                     .getResourceAsStream("database/database.properties");
 
             if (input == null) {
-                System.out.println("⚠️ Arquivo database.properties não encontrado!");
+                System.out.println("Arquivo database.properties não encontrado");
                 return null;
             }
 
@@ -26,9 +26,8 @@ public class DatabaseConnection {
             String password = props.getProperty("db.password");
 
             connection = DriverManager.getConnection(url, user, password);
-            //System.out.println("✅ Conexão com banco estabelecida!");
         } catch (Exception e) {
-            System.out.println("❌ Erro ao conectar com banco: " + e.getMessage());
+            System.out.println("Erro ao conectar com banco: " + e.getMessage());
         }
 
         return connection;

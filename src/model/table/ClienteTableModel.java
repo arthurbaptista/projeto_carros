@@ -9,8 +9,6 @@ public class ClienteTableModel extends AbstractTableModel {
 
     private List<Cliente> clientes;
     private final String[] colunas = {"Nome", "Sobrenome", "RG", "CPF", "Endereço"};
-
-    // DAO temporário apenas para formatação
     private dao.ClienteDAO daoFormatter = new dao.ClienteDAO();
 
     public ClienteTableModel() {

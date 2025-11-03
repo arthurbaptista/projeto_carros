@@ -82,4 +82,25 @@ public class LocacaoDAO {
 
         return locacoes;
     }
+    public Locacao buscarLocacaoPorPlaca(String placa) {
+        String sql = "SELECT * FROM locacoes WHERE veiculo_placa = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, placa);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                Calendar data = Calendar.getInstance();
+                data.setTime(rs.getDate("data_locacao"));
+                return new Locacao(
+                        rs.getInt("dias"),
+                        rs.getDouble("valor_total"),
+                        data,
+                        new Cliente(null, null, null, rs.getString("cliente_cpf"), null)
+                );
+            }
+        } catch (SQLException e) {
+            System.out.println("Erro ao buscar locação por placa: " + e.getMessage());
+        }
+        return null;
+    }
 }

@@ -9,7 +9,6 @@ import java.util.List;
 public class VeiculoDevolucaoTableModel extends AbstractTableModel {
 
     private List<Veiculo> veiculos;
-    // Colunas conforme PDF (4.a)
     private final String[] colunas = {"Cliente", "Placa", "Marca", "Modelo", "Ano", "Data Locação", "Preço Diária", "Dias", "Valor Locação"};
 
     public VeiculoDevolucaoTableModel() {

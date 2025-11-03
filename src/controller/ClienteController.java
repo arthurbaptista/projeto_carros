@@ -16,8 +16,6 @@ public class ClienteController {
             throw new RuntimeException("Preencha todos os campos!");
         }
 
-        // Validações de CPF/RG podem ser adicionadas aqui
-
         Cliente cliente = new Cliente(nome, sobrenome, rg, cpf, endereco);
         clienteDAO.salvar(cliente);
     }
@@ -42,7 +40,6 @@ public class ClienteController {
         if (clienteSelecionado == null) {
             throw new RuntimeException("Selecione um cliente para excluir!");
         }
-        // A lógica de verificação de locação está no DAO
         clienteDAO.excluir(clienteSelecionado);
     }
 

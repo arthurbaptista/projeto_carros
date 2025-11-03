@@ -31,7 +31,6 @@ public class DatabaseInitializer {
             )
             """;
 
-        // SQL PARA NOVA TABELA
         String sqlLocacoes = """
             CREATE TABLE IF NOT EXISTS locacoes (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -50,8 +49,8 @@ public class DatabaseInitializer {
 
             stmt.execute(sqlClientes);
             stmt.execute(sqlVeiculos);
-            stmt.execute(sqlLocacoes); // Executa a criação da nova tabela
-            System.out.println("✅ Tabelas criadas com sucesso!");
+            stmt.execute(sqlLocacoes);
+            System.out.println("Tabelas criadas com sucesso!");
 
         } catch (Exception e) {
             System.out.println("Erro ao criar tabelas: " + e.getMessage());

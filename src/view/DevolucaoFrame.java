@@ -77,7 +77,6 @@ public class DevolucaoFrame extends JFrame {
     }
 
     private void carregarVeiculosLocados() {
-        // Busca os veículos locados
         tableModel.setVeiculos(veiculoController.listarLocados());
         veiculoSelecionado = null;
         btnDevolver.setEnabled(false);

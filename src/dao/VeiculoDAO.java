@@ -14,7 +14,6 @@ public class VeiculoDAO {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            // Determinar o tipo e modelo
             String tipo = "";
             String modelo = "";
 
@@ -32,17 +31,6 @@ public class VeiculoDAO {
                 System.out.println("🚐 Salvando VAN - Modelo: " + modelo);
             }
 
-            // Debug: mostrar todos os valores
-            System.out.println("  Valores a serem salvos:");
-            System.out.println("  Tipo: " + tipo);
-            System.out.println("  Marca: " + veiculo.getMarca().name());
-            System.out.println("  Estado: " + veiculo.getEstado().name());
-            System.out.println("  Categoria: " + veiculo.getCategoria().name());
-            System.out.println("  Valor Compra: " + veiculo.getValorDeCompra());
-            System.out.println("  Placa: " + veiculo.getPlaca());
-            System.out.println("  Ano: " + veiculo.getAno());
-            System.out.println("  Modelo: " + modelo);
-
             stmt.setString(1, tipo);
             stmt.setString(2, veiculo.getMarca().name());
             stmt.setString(3, veiculo.getEstado().name());
@@ -53,10 +41,10 @@ public class VeiculoDAO {
             stmt.setString(8, modelo);
 
             int linhasAfetadas = stmt.executeUpdate();
-            System.out.println("✅ Veículo salvo! Linhas afetadas: " + linhasAfetadas);
+            System.out.println("Veículo salvo! Linhas afetadas: " + linhasAfetadas);
 
         } catch (SQLException e) {
-            System.out.println("❌ Erro ao salvar veículo: " + e.getMessage());
+            System.out.println("Erro ao salvar veículo: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -75,7 +63,7 @@ public class VeiculoDAO {
             }
 
         } catch (SQLException e) {
-            System.out.println("❌ Erro ao buscar veículo por placa: " + e.getMessage());
+            System.out.println("Erro ao buscar veículo por placa: " + e.getMessage());
         }
 
         return null;
@@ -97,7 +85,7 @@ public class VeiculoDAO {
             }
 
         } catch (SQLException e) {
-            System.out.println("❌ Erro ao listar veículos: " + e.getMessage());
+            System.out.println("Erro ao listar veículos: " + e.getMessage());
         }
 
         return veiculos;
@@ -113,27 +101,55 @@ public class VeiculoDAO {
         int ano = rs.getInt("ano");
         String modeloStr = rs.getString("modelo");
 
+        Veiculo veiculo = null;
+
         switch (tipo) {
             case "AUTOMOVEL":
                 ModeloAutomovel modeloAuto = ModeloAutomovel.valueOf(modeloStr);
-                return new Automovel(marca, estado, categoria, valorCompra, placa, ano, modeloAuto);
-
+                veiculo = new Automovel(marca, estado, categoria, valorCompra, placa, ano, modeloAuto);
+                break;
             case "MOTOCICLETA":
                 ModeloMotocicleta modeloMoto = ModeloMotocicleta.valueOf(modeloStr);
-                return new Motocicleta(marca, estado, categoria, valorCompra, placa, ano, modeloMoto);
-
+                veiculo = new Motocicleta(marca, estado, categoria, valorCompra, placa, ano, modeloMoto);
+                break;
             case "VAN":
                 ModeloVan modeloVan = ModeloVan.valueOf(modeloStr);
-                return new Van(marca, estado, categoria, valorCompra, placa, ano, modeloVan);
-
-            default:
-                return null;
+                veiculo = new Van(marca, estado, categoria, valorCompra, placa, ano, modeloVan);
+                break;
         }
+
+        // Tenta carregar a locação se o veículo estiver locado
+        if (veiculo != null && veiculo.getEstado() == Estado.LOCADO) {
+            Locacao locacao = new LocacaoDAO().buscarLocacaoPorPlaca(veiculo.getPlaca());
+            if (locacao != null) {
+                Cliente cliente = new ClienteDAO().buscarPorCPF(locacao.getCliente().getCpf());
+                locacao.setCliente(cliente); // Seta o cliente na locação
+                veiculo.setLocacao(locacao); // Seta a locação no veículo
+            }
+        }
+        return veiculo;
     }
 
-    // Métodos para buscar veículos por estado (serão úteis depois)
     public List<Veiculo> listarDisponiveis() {
-        return listarPorEstado(Estado.DISPONIVEL);
+        List<Veiculo> veiculos = new ArrayList<>();
+        String sql = "SELECT * FROM veiculos WHERE estado = 'DISPONIVEL' OR estado = 'NOVO'";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                Veiculo veiculo = criarVeiculoFromResultSet(rs);
+                if (veiculo != null) {
+                    veiculos.add(veiculo);
+                }
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Erro ao listar veículos disponíveis: " + e.getMessage());
+        }
+
+        return veiculos;
     }
 
     public List<Veiculo> listarLocados() {
@@ -158,7 +174,7 @@ public class VeiculoDAO {
             }
 
         } catch (SQLException e) {
-            System.out.println("❌ Erro ao listar veículos por estado: " + e.getMessage());
+            System.out.println("Erro ao listar veículos por estado: " + e.getMessage());
         }
 
         return veiculos;
@@ -174,10 +190,10 @@ public class VeiculoDAO {
             stmt.setString(2, placa);
             stmt.executeUpdate();
 
-            System.out.println("✅ Estado do veículo " + placa + " atualizado para: " + novoEstado);
+            System.out.println("Estado do veículo " + placa + " atualizado para: " + novoEstado);
 
         } catch (SQLException e) {
-            System.out.println("❌ Erro ao atualizar estado do veículo: " + e.getMessage());
+            System.out.println("Erro ao atualizar estado do veículo: " + e.getMessage());
         }
     }
 }

@@ -22,19 +22,33 @@ public class LocacaoController {
         this.locacaoDAO = new LocacaoDAO();
     }
 
+    private String normalize(String s) {
+        if (s == null) return "";
+        return s.replaceAll("[^0-9]", "");
+    }
+
     public Cliente buscarCliente(String busca) {
         if (busca.isEmpty()) {
             throw new RuntimeException("Digite um nome ou CPF para buscar!");
         }
 
+        // Normaliza a busca caso seja um CPF
+        String buscaNormalizada = normalize(busca);
+
         List<Cliente> clientes = clienteDAO.listarTodos();
         for (Cliente cliente : clientes) {
-            if (cliente.getNome().toLowerCase().contains(busca.toLowerCase()) ||
-                    cliente.getCpf().contains(busca)) {
+
+            boolean achouNome = cliente.getNome().toLowerCase().contains(busca.toLowerCase()) ||
+                    cliente.getSobrenome().toLowerCase().contains(busca.toLowerCase());
+
+            // 2. Compara CPF (normalizado)
+            String cpfNormalizado = normalize(cliente.getCpf());
+            boolean achouCpf = !cpfNormalizado.isEmpty() && cpfNormalizado.contains(buscaNormalizada);
+
+            if (achouNome || achouCpf) {
                 return cliente;
             }
         }
-        // Se não encontrar, lança exceção
         throw new RuntimeException("Cliente não encontrado!");
     }
 
@@ -56,7 +70,6 @@ public class LocacaoController {
             throw new RuntimeException("Número de dias deve ser um valor válido!");
         }
 
-        // Validar data
         String[] dataParts = dataStr.split("/");
         if (dataParts.length != 3) {
             throw new RuntimeException("Data deve estar no formato dd/MM/yyyy!");
@@ -65,6 +78,11 @@ public class LocacaoController {
         Calendar dataLocacao;
         try {
             dataLocacao = Calendar.getInstance();
+            dataLocacao.set(Calendar.HOUR_OF_DAY, 0);
+            dataLocacao.set(Calendar.MINUTE, 0);
+            dataLocacao.set(Calendar.SECOND, 0);
+            dataLocacao.set(Calendar.MILLISECOND, 0);
+
             dataLocacao.set(Calendar.DAY_OF_MONTH, Integer.parseInt(dataParts[0]));
             dataLocacao.set(Calendar.MONTH, Integer.parseInt(dataParts[1]) - 1); // Mês é base 0
             dataLocacao.set(Calendar.YEAR, Integer.parseInt(dataParts[2]));
@@ -72,10 +90,8 @@ public class LocacaoController {
             throw new RuntimeException("Data inválida!");
         }
 
-        // Executar locação no modelo
         veiculo.locar(dias, dataLocacao, cliente);
 
-        // Persistir no banco
         veiculoDAO.atualizarEstado(veiculo.getPlaca(), Estado.LOCADO);
         locacaoDAO.salvar(veiculo.getLocacao(), veiculo);
     }
@@ -87,10 +103,8 @@ public class LocacaoController {
 
         String placa = veiculo.getPlaca();
 
-        // Chama o método do modelo
         veiculo.devolver();
 
-        // Persiste as mudanças
         veiculoDAO.atualizarEstado(placa, Estado.DISPONIVEL);
         locacaoDAO.excluirPorPlaca(placa);
     }
@@ -102,10 +116,8 @@ public class LocacaoController {
 
         String placa = veiculo.getPlaca();
 
-        // Chama o método do modelo
         veiculo.vender();
 
-        // Persiste a mudança
         veiculoDAO.atualizarEstado(placa, Estado.VENDIDO);
     }
 }
