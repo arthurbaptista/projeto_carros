@@ -15,6 +15,14 @@ import java.util.List;
 
 public class LocacaoDAO {
 
+    private String formatarCPF(String cpf) {
+        cpf = cpf.replaceAll("[^0-9]", "");
+        if (cpf.length() == 11) {
+            return cpf.substring(0, 3) + "." + cpf.substring(3, 6) + "." + cpf.substring(6, 9) + "-" + cpf.substring(9);
+        }
+        return cpf;
+    }
+
     public void salvar(Locacao locacao, Veiculo veiculo) {
         String sql = "INSERT INTO locacoes (veiculo_placa, cliente_cpf, data_locacao, dias, valor_total) VALUES (?, ?, ?, ?, ?)";
 
@@ -22,7 +30,8 @@ public class LocacaoDAO {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, veiculo.getPlaca());
-            stmt.setString(2, locacao.getCliente().getCpf());
+            // *** CORRIGIDO: Formata o CPF antes de salvar ***
+            stmt.setString(2, formatarCPF(locacao.getCliente().getCpf()));
             stmt.setDate(3, new Date(locacao.getData().getTimeInMillis()));
             stmt.setInt(4, locacao.getDias());
             stmt.setDouble(5, locacao.getValor());
@@ -60,7 +69,8 @@ public class LocacaoDAO {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, cpf);
+            // *** CORRIGIDO: Busca pelo CPF formatado ***
+            stmt.setString(1, formatarCPF(cpf));
             ResultSet rs = stmt.executeQuery();
 
             while (rs.next()) {
@@ -82,6 +92,7 @@ public class LocacaoDAO {
 
         return locacoes;
     }
+
     public Locacao buscarLocacaoPorPlaca(String placa) {
         String sql = "SELECT * FROM locacoes WHERE veiculo_placa = ?";
         try (Connection conn = DatabaseConnection.getConnection();

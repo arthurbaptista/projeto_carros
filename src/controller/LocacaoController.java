@@ -5,6 +5,7 @@ import dao.LocacaoDAO;
 import dao.VeiculoDAO;
 import enums.Estado;
 import model.Cliente;
+import model.Locacao; // <-- IMPORT ADICIONADO
 import model.Veiculo;
 
 import java.util.Calendar;
@@ -58,6 +59,11 @@ public class LocacaoController {
         }
         if (veiculo == null) {
             throw new RuntimeException("Selecione um veículo da tabela!");
+        }
+
+        List<Locacao> locacoesAtivas = locacaoDAO.buscarAtivasPorCPF(cliente.getCpf());
+        if (!locacoesAtivas.isEmpty()) {
+            throw new RuntimeException("Este cliente já possui um veículo locado! (Regra: 1 por vez)");
         }
 
         int dias;
